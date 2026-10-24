@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#150a24" />
+    <title>HR Command Center</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-mark">✦</div>
+                <div><strong>HR COMMAND CENTER</strong></div>
+                <button class="close-menu" onclick="toggleMenu()">×</button>
+            </div>
+            <div class="workspace"><div class="workspace-icon">PP</div><div><span>Workspace</span><strong>PeoplePulse HQ</strong></div><span>⌄</span></div>
+            <div class="nav-label">Workspace</div>
+            <nav>
+                <button class="nav-item active" onclick="showPage(this,'Dashboard')"><span class="nav-icon">▦</span>Dashboard</button>
+                <button class="nav-item" onclick="goToSection(this,'Attendance','attendancePanel')"><span class="nav-icon">◷</span>Attendance <em class="live">LIVE</em></button>
+                <button class="nav-item" id="navEmployees" onclick="showPage(this,'Employees')"><span class="nav-icon">♙</span>Employees</button>
+                <button class="nav-item" id="navDepartments" onclick="showPage(this,'Departments')"><span class="nav-icon">▦</span>Departments</button>
+                <button class="nav-item" id="navLocation" onclick="showPage(this,'Location')"><span class="nav-icon">⌖</span>Location</button>
+                <button class="nav-item" onclick="showPage(this,'Projects')"><span class="nav-icon">◫</span>Projects</button>
+                <button class="nav-item" onclick="showPage(this,'OrgChart')"><span class="nav-icon">⛓</span>Org Chart</button>
+                <button class="nav-item" onclick="openLeaveRequestsPage(this)"><span class="nav-icon">▣</span>Leave requests <em class="badge leave-badge">0</em></button>
+                <button class="nav-item" onclick="showPage(this,'Analytics')"><span class="nav-icon">⌁</span>Reports & Analytics</button>
+            </nav>
+            <div class="nav-label manage">Manage</div>
+            <nav>
+                <button class="nav-item" onclick="notify('Payroll workspace opened')"><span class="nav-icon">▤</span>Payroll</button>
+                <button class="nav-item" onclick="notify('Settings workspace opened')"><span class="nav-icon">⚙</span>Settings</button>
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="support"><span>?</span><div><strong>Need a hand?</strong><span>Visit Help Center</span></div><span>↗</span></div>
+                <button class="profile"><div class="avatar">RA</div><div><strong>Rania Chen</strong><span>HR Administrator</span></div><b>•••</b></button>
+                <button class="signout" onclick="notify('You are already in a demo workspace')">↪ &nbsp; Sign out</button>
+            </div>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button class="mobile-menu" onclick="toggleMenu()">☰</button>
+                <div class="breadcrumb"><span>Workspace</span><span>/</span><b id="currentPage">Dashboard</b></div>
+                <button class="search-trigger" onclick="openGlobalSearch()">
+                    🔍 <span class="search-trigger-label">&nbsp;Search employees, departments, projects... <kbd>Ctrl K</kbd></span>
+                </button>
+                <div class="top-actions">
+                    <div class="icon-btn search-trigger-mobile" onclick="openGlobalSearch()" title="Search">🔍</div>
+                    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">
+                        ☀️
+                    </button>
+
+                    <div class="notif-wrap">
+                        <div class="icon-btn notif-bell-btn" id="notifBell" onclick="toggleNotificationsPanel()" title="Notifications">
+                            🔔<i class="notification-dot" id="notifDot" style="display:none;"></i>
+                        </div>
+                        <div class="notif-panel" id="notifPanel">
+                            <div class="notif-head">Notifications</div>
+                            <div id="notifList"></div>
+                        </div>
+                    </div>
+
+                    <div class="top-avatar" id="myAvatar" onclick="document.getElementById('myAvatarFile').click()" title="Click to set your profile photo">SC</div>
+                    <input type="file" id="myAvatarFile" accept="image/*" style="display:none;" onchange="setMyAvatar(event)" />
+                </div>
+
+            </header>
+
+            <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this) closeGlobalSearch()">
+                <div class="cmdk-box">
+                    <div class="cmdk-input-wrap">
+                        <span>🔍</span>
+                        <input id="cmdkInput" placeholder="Search employees, departments, projects, locations..." oninput="runGlobalSearch()" onkeydown="onCmdkKeydown(event)" />
+                        <span class="cmdk-esc">ESC</span>
+                    </div>
+                    <div class="cmdk-results" id="cmdkResults"></div>
+                </div>
+            </div>
+
+
+            <div class="wrap">
+
+                <button id="backToDashboardBtn" class="back-to-dashboard" onclick="backToDashboard()" style="display:none;">
+                    <span>←</span> Back to Dashboard
+                </button>
+
+                <div class="page" id="page-Dashboard">
+                    <section class="hero">
+                        <div>
+                            <!-- أضفنا id="currentDate" هنا -->
+                            <div class="eyebrow"><span class="pulse"></span><span id="currentDate"></span></div>
+                            <h1>Good morning, Rania <span>✦</span></h1>
+                        </div>
+                        <div class="hero-actions">
+                            <button class="secondary" onclick="exportAttendanceCSV()">⇩ &nbsp; Export CSV</button>
+                        </div>
+                    </section>
+
+                    <section class="grid one">
+                        <div class="panel attendance" id="attendancePanel">
+                            <div class="panel-head">
+                                <div>
+                                    <div class="kicker"><span class="live-dot"></span>Live now</div>
+                                    <h2>Today’s attendance</h2>
+                                </div>
+                                <button class="more">•••</button>
+                            </div>
+
+                            <div class="attendance-body">
+                                <div class="donut" id="attendanceDonut"><div><strong id="attendancePct">0%</strong>attendance</div></div>
+                                <div class="legend">
+                                    <div data-status="Present">
+                                        <span class="dot present"></span>
+                                        <div><strong>Present</strong><small id="pctPresent">0%</small></div>
+                                    </div>
+                                    <div data-status="Late">
+                                        <span class="dot late"></span>
+                                        <div><strong>Late</strong><small id="pctLate">0%</small></div>
+                                    </div>
+                                    <div data-status="Absent">
+                                        <span class="dot absent"></span>
+                                        <div><strong>Absent</strong><small id="pctAbsent">0%</small></div>
+                                    </div>
+                                    <div data-status="Leave">
+                                        <span class="dot leave"></span>
+                                        <div><strong>Leave</strong><small id="pctLeave">0%</small></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="footer">
+                                <span><span class="live-dot"></span>Last updated 2 min ago</span>
+                                <button onclick="notify('Attendance refreshed')">Refresh data ↗</button>
+                            </div>
+                        </div>
+
+                        <div class="panel trend" id="attendanceHistoryPanel">
+                            <div class="panel-head">
+                                <div>
+                                    <h2>Attendance history</h2>
+                                </div>
+                            </div>
+                            <div class="att-history-controls">
+                                <input list="attHistorySuggestions" id="attHistorySearch" class="att-history-search" placeholder="Search by employee name or department..." oninput="onAttHistorySearchInput()" onkeydown="if(event.key==='Enter'){event.preventDefault();runAttHistorySearch();}" />
+                                <datalist id="attHistorySuggestions"></datalist>
+                                <button type="button" id="attHistorySearchBtn" class="att-history-search-btn" style="display:none;" onclick="runAttHistorySearch()">Search ⌕</button>
+                                <select id="attHistoryMonth" onchange="renderAttendanceHistory()"></select>
+                            </div>
+                            <div class="att-history-summary" id="attHistorySummary"></div>
+                            <div class="att-history-log" id="attHistoryLog"></div>
+                        </div>
+                    </section>
+                    <section class="grid two">
+                        <div class="panel table-panel" id="employeesPanelMini">
+                            <div class="panel-head table-head"><div><div class="kicker">Team snapshot</div><h2>Employees <span class="count" id="empCountMini">7</span></h2></div><button class="text-btn" onclick="showPage(document.getElementById('navEmployees'),'Employees')">View all ↗</button></div>
+                            <div class="mini-header"><span>Employee</span><span>Department</span><span>Status</span></div>
+                            <div id="miniFilterNotice" class="filter-notification" style="display:none;margin:10px 20px 0;"></div>
+                            <div id="employeeRowsMini"></div>
+                        </div>
+
+                        <div class="panel table-panel" id="quickActionsPanel">
+                            <div class="panel-head table-head"><div><h2>Quick Actions</h2></div></div>
+                            <div class="quick-actions-grid">
+                                <button class="quick-action-card" onclick="quickAction('recordAttendance')">
+                                    <div class="qa-icon" style="background:linear-gradient(135deg,#3fbfa0,#2c8f80)">◷</div>
+                                    <strong>Record Attendance</strong>
+                                    <span>Log or edit today's check-ins</span>
+                                </button>
+                                <button class="quick-action-card" onclick="quickAction('approveLeave')">
+                                    <div class="qa-icon" style="background:linear-gradient(135deg,#8a7de0,#6c5fc7)">▣</div>
+                                    <strong>Approve Leave Request</strong>
+                                    <span id="qaLeaveCount">5 requests waiting for review</span>
+                                </button>
+                                <button class="quick-action-card" onclick="quickAction('exportReport')">
+                                    <div class="qa-icon" style="background:linear-gradient(135deg,#565b73,#3f4358)">⇩</div>
+                                    <strong>Export Today's Report</strong>
+                                    <span>Download attendance as CSV</span>
+                                </button>
+                                <button class="quick-action-card" onclick="quickAction('sendAnnouncement')">
+                                    <div class="qa-icon" style="background:linear-gradient(135deg,#c06a8a,#a2506f)">✉</div>
+                                    <strong>Send Announcement</strong>
+                                    <span>Notify the whole company</span>
+                                </button>
+                                <button class="quick-action-card" onclick="quickAction('createReport')">
+                                    <div class="qa-icon" style="background:linear-gradient(135deg,#6d78e8,#5563d6)">▦</div>
+                                    <strong>Create HR Report</strong>
+                                    <span>Generate a summary report</span>
+                                </button>
+                            </div>
+
+                            <div id="hrReportBox" class="hr-report-box" style="display:none;"></div>
+
+                            <div class="recent-activity">
+                                <h3>Recent Activity</h3>
+                                <div id="recentActivityList" class="recent-activity-list"></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="page" id="page-Departments" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Workspace</div>
+                            <h1>Departments</h1>
+                        </div>
+                    </section>
+
+                    <div class="panel dept-panel" id="departmentsPanel" style="margin-bottom:20px;">
+                        <div class="panel-head table-head"><div><div class="kicker">Team health</div><h2>By department</h2></div><button class="more" onclick="notify('Live data','Percentages are calculated live from each department\\'s employees.')">••</button></div>
+                        <div class="dept-grid" id="deptGrid"></div>
+                    </div>
+                </div>
+
+
+                <div class="page" id="page-Projects" style="display:none">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Projects</div>
+                            <h1>Active projects</h1>
+                            <p>Timeline, requirements, and assigned team — all in one place.</p>
+                        </div>
+                    </section>
+
+                    <button class="add-employee-tile" id="addProjectTile" onclick="toggleAddProjectSection()">
+                        <span class="add-employee-tile-icon">＋</span>
+                        <div><strong>Add Project</strong><span>Click to set up a new project, its timeline and team</span></div>
+                    </button>
+
+                    <section class="add-section-card" id="addProjectSection" style="display:none;">
+                        <h2 id="addProjectSectionTitle">Add New Project</h2>
+                        <p id="addProjectSectionDesc">Set the timeline, any special requirements, and who's on it.</p>
+                        <div class="edit-mode-banner" id="editProjectModeBanner"></div>
+
+                        <div class="form">
+                            <label>
+                                Project Name
+                                <input type="text" id="projName" placeholder="e.g. SwapIt 2.3" />
+                            </label>
+
+                            <div class="two">
+                                <label>
+                                    Start Date
+                                    <input type="date" id="projStartDate" />
+                                </label>
+
+                                <label>
+                                    End Date <small style="opacity:.55;font-weight:400;">(estimated / target)</small>
+                                    <input type="date" id="projEndDate" />
+                                </label>
+                            </div>
+
+                            <label>
+                                Notes / special requirements <small style="opacity:.55;font-weight:400;">(from the manager or the customer)</small>
+                                <textarea id="projNotes" rows="3" placeholder="e.g. Customer requires weekly demo every Thursday; manager wants staging deployed before UAT..." style="width:100%;resize:vertical;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:inherit;font-family:inherit;font-size:12.5px;"></textarea>
+                            </label>
+
+                            <label style="margin-bottom:6px;">
+                                Assign Employees <small style="opacity:.55;font-weight:400;">— drag a name or a whole department card into "Assigned"</small>
+                            </label>
+                            <div class="table-search" style="margin-bottom:10px;">⌕<input id="projAssignSearch" oninput="renderProjectAssignUI()" placeholder="Search employee or department..." /></div>
+
+                            <div class="dnd-wrap">
+                                <div class="dnd-pane">
+                                    <h4>Available <span id="dndPoolCount" class="count">0</span></h4>
+                                    <div class="dnd-dept-chips" id="dndDeptChips"></div>
+                                    <div class="dnd-list" id="dndPoolList" ondragover="allowDrop(event)" ondrop="dropToPool(event)"></div>
+                                </div>
+                                <div class="dnd-pane">
+                                    <h4>Assigned to this project <span id="dndAssignedCount" class="count">0</span></h4>
+                                    <div class="dnd-list dnd-list-target" id="dndAssignedList" ondragover="allowDrop(event)" ondrop="dropToAssigned(event)"></div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                                <button class="primary" id="projSubmitBtn" onclick="submitProject()">Save Project</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="projects-grid" id="projectsGrid"></div>
+                </div>
+
+                <div class="page" id="page-OrgChart" style="display:none">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Workspace</div>
+                            <h1>Org Chart <span>✦</span></h1>
+                            <p>Employees grouped by department. Add a manager field later to show real reporting lines.</p>
+                        </div>
+                    </section>
+                    <div class="org-chart" id="orgChart"></div>
+                </div>
+
+                <div class="page" id="page-Analytics" style="display:none">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Insights</div>
+                            <h1>Reports & Analytics <span>✦</span></h1>
+                            <p>A live snapshot of the workforce, computed from current data.</p>
+                        </div>
+                        <div class="hero-actions">
+                            <button class="secondary" onclick="exportEmployeesCSV()">⇩ &nbsp; Export CSV</button>
+                        </div>
+                    </section>
+
+                    <div class="kpi-grid" id="analyticsKpis"></div>
+
+                    <section class="panel dept-panel" style="margin-bottom:20px;">
+                        <div class="panel-head table-head"><div><div class="kicker">Attendance report</div><h2>By department & period</h2></div></div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 18px 14px;">
+                            <select id="reportDeptSelect" onchange="renderAttendanceReport()" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:inherit;font-size:12.5px;"></select>
+                            <select id="reportPeriodSelect" onchange="renderAttendanceReport()" style="padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:inherit;font-size:12.5px;">
+                                <option value="week">This week</option>
+                                <option value="month" selected>This month</option>
+                            </select>
+                            <div class="table-search" style="flex:1;min-width:200px;">⌕<input id="reportEmpSearch" oninput="renderAttendanceReport()" placeholder="Or search one employee by name..." /></div>
+                            <button class="secondary" onclick="exportAttendanceReportCSV()">⇩ &nbsp; Export report</button>
+                        </div>
+                        <div id="reportSummary" style="padding:0 18px 14px;"></div>
+                        <div class="dept-list" id="reportEmployeeList" style="padding:0 18px 18px;"></div>
+                    </section>
+                </div>
+
+                <div class="page" id="page-Employees" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Workspace</div>
+                            <h1>Employees Directory <span>✦</span></h1>
+                        </div>
+                        <div class="hero-actions">
+                            <button class="secondary" onclick="exportEmployeesCSV()">⇩ &nbsp; Export CSV</button>
+                        </div>
+                    </section>
+
+                    <button class="add-employee-tile" id="addEmployeeTile" onclick="toggleAddEmployeeSection()">
+                        <span class="add-employee-tile-icon">＋</span>
+                        <div><strong>Add Employee</strong><span>Click to fill in a new team member's details</span></div>
+                    </button>
+
+                    <section class="add-section-card" id="addEmployeeSection" style="display:none;">
+                        <h2 id="addEmployeeSectionTitle">Add New Employee</h2>
+                        <p id="addEmployeeSectionDesc">Fill in the details, job information, upload a photo, and register a new team member.</p>
+                        <div class="edit-mode-banner" id="editModeBanner"></div>
+
+                        <div class="form">
+                            <div class="two">
+                                <label>
+                                    Full Name
+                                    <input type="text" id="empName" placeholder="e.g. Rania Alassouli" />
+                                </label>
+
+                                <label>
+                                    Date of Birth
+                                    <input type="date" id="empDOB" />
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Email Address
+                                    <input type="email" id="empEmail" placeholder="name@peoplepulse.io" />
+                                </label>
+
+                                <label>
+                                    Phone (10 digits)
+                                    <input type="tel"
+                                           id="empPhone"
+                                           inputmode="numeric"
+                                           maxlength="10"
+                                           placeholder="e.g. 5123456789" />
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Department
+                                    <!-- استخدام حقل input مع دمج datalist بدلاً من select -->
+                                    <input type="text" id="empDept" list="deptList" placeholder="Select or type department..." />
+
+                                    <datalist id="deptList"></datalist>
+                                </label>
+
+                                <label>
+                                    Job Title
+                                    <input type="text" id="empTitle" placeholder="e.g. Frontend Developer" />
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Work Mode
+                                    <select id="empWorkMode">
+                                        <option value="onsite">On-site</option>
+                                        <option value="remote">Remote</option>
+
+                                    </select>
+                                </label>
+
+                                <label>
+                                    Assigned Project(s)
+                                    <input type="text" id="empProject" list="projSuggestions" placeholder="e.g. SwapIt, CRM v2 (comma-separated for more than one)" />
+                                    <datalist id="projSuggestions"></datalist>
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Employment Start Date
+                                    <input type="date" id="empStartDate" />
+                                </label>
+
+                                <label>
+                                    Contract End Date <small style="opacity:.55;font-weight:400;">(leave blank if still active — HR gets notified 2 weeks before it ends)</small>
+                                    <input type="date" id="empEndDate" />
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Basic Salary (JOD)
+                                    <input type="number" id="empBasicSalary" min="0" step="1" placeholder="e.g. 800" oninput="updateFinalSalaryPreview()" />
+                                </label>
+
+                                <label>
+                                    Transportation Deduction <small style="opacity:.55;font-weight:400;">(bus allowance, subtracted)</small>
+                                    <input type="number" id="empTransportDeduction" min="0" step="1" placeholder="e.g. 10" oninput="updateFinalSalaryPreview()" />
+                                </label>
+                            </div>
+
+                            <div class="two">
+                                <label>
+                                    Food Allowance <small style="opacity:.55;font-weight:400;">(added on top)</small>
+                                    <input type="number" id="empFoodAllowance" min="0" step="1" placeholder="e.g. 30" oninput="updateFinalSalaryPreview()" />
+                                </label>
+
+                                <label>
+                                    Final Salary <small style="opacity:.55;font-weight:400;">(computed automatically)</small>
+                                    <input type="text" id="empFinalSalaryPreview" disabled placeholder="—" style="font-weight:800;" />
+                                </label>
+                            </div>
+
+                            <label>
+                                Employee Photo
+                                <div class="file-input-wrapper">
+                                    <div class="file-preview-box" id="previewBox">Photo</div>
+                                    <input type="file" id="empPhotoFile" accept="image/*" onchange="previewImage(event)" style="flex:1;" />
+                                </div>
+                            </label>
+
+                            <div class="two">
+                                <label>
+                                    CV / Resume <span style="color:#ff6b6b;">*</span>
+                                    <input type="file" id="empCV" accept=".pdf,.doc,.docx" onchange="onDocFileChange(event,'cv')" />
+                                    <small id="empCvName" style="display:block;opacity:.6;margin-top:4px;font-weight:400;">No file selected</small>
+                                </label>
+
+                                <label>
+                                    Certificate of Good Conduct <span style="color:#ff6b6b;">*</span>
+                                    <input type="file" id="empCriminalCert" accept=".pdf,.doc,.docx,image/*" onchange="onDocFileChange(event,'criminalCert')" />
+                                    <small id="empCriminalCertName" style="display:block;opacity:.6;margin-top:4px;font-weight:400;">No file selected</small>
+                                </label>
+                            </div>
+
+                            <label>
+                                Passport Copy <span style="color:#ff6b6b;">*</span>
+                                <input type="file" id="empPassport" accept=".pdf,.doc,.docx,image/*" onchange="onDocFileChange(event,'passport')" />
+                                <small id="empPassportName" style="display:block;opacity:.6;margin-top:4px;font-weight:400;">No file selected</small>
+                            </label>
+
+                            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                                <button class="primary" id="empSubmitBtn" onclick="submitNewEmployee()">Save New Employee</button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="panel table-panel" id="employeesPanelFull">
+                        <div class="panel-head table-head"><div><div class="kicker">All employees</div><h2>Employees Directory <span class="count" id="empCount">7</span></h2></div><button class="text-btn" onclick="exportEmployeesCSV()">Export ↗</button></div>
+                        <div class="filters">
+                            <div class="table-search">⌕<input id="employeeSearch" oninput="filterEmployees()" placeholder="Find an employee..." /><kbd>Instant Search</kbd></div>
+                        </div>
+                        <div class="status-chip-row" id="statusChipRow">
+                            <button class="status-chip active" data-status="All" onclick="setEmployeeStatusFilter('All')">All</button>
+                            <button class="status-chip" data-status="Present" onclick="setEmployeeStatusFilter('Present')">🟢 Present</button>
+                            <button class="status-chip" data-status="Late" onclick="setEmployeeStatusFilter('Late')">🟡 Late</button>
+                            <button class="status-chip" data-status="Absent" onclick="setEmployeeStatusFilter('Absent')">🔴 Absent</button>
+                            <button class="status-chip" data-status="Leave" onclick="setEmployeeStatusFilter('Leave')">🔵 Leave</button>
+                        </div>
+                        <div class="table-header"><span>Employee</span><span>Department</span><span>Job Title / Project</span><span>Work Mode</span><span>Attendance</span><span>Actions</span></div>
+                        <div id="employeeRows"></div>
+                        <div class="pagination-bar" id="employeePagination"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="page-Location" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Workspace</div>
+                            <h1>Location <span>✦</span></h1>
+                            <p>Where every team member is checking in from.</p>
+                        </div>
+                    </section>
+
+                    <div class="panel dept-panel" style="margin-bottom:20px;">
+                        <div class="panel-head table-head"><div><div class="kicker">Live map</div><h2>Check-in coordinates</h2></div></div>
+                        <div id="geoMap" style="height:400px;border-radius:12px;overflow:hidden;margin:0 18px;width:calc(100% - 36px);"></div>
+                        <div class="geo-legend">
+                            <span><i style="background:#c98bfa"></i> Checked in at assigned location</span>
+                            <span><i style="background:#ff6b6b"></i> Checked in somewhere else</span>
+                            <span><i style="background:#4dd8f0"></i> Assigned location (no check-in yet)</span>
+                        </div>
+                    </div>
+
+                    <div class="panel table-panel" id="locationPanel">
+                        <div class="panel-head table-head"><div><div class="kicker">Everyone, everywhere</div><h2>Employee locations <span class="count" id="locCount">7</span></h2></div></div>
+                        <div class="filters">
+                            <div class="table-search">⌕<input id="locationSearch" oninput="filterLocations()" placeholder="Find an employee or location..." /><kbd>Instant Search</kbd></div>
+                        </div>
+                        <div class="table-header"><span>Employee</span><span>Department</span><span>Location</span><span>Work Mode</span><span>Check-in</span></div>
+                        <div id="locationRows"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="page-RecordAttendance" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Attendance</div>
+                            <h1>Record Attendance <span>✦</span></h1>
+                            <p>Set today's status for each employee — changes update the dashboard instantly.</p>
+                        </div>
+                        <div class="hero-actions">
+                            <button class="primary" onclick="saveAttendanceRecords()">Save changes</button>
+                        </div>
+                    </section>
+                    <div class="panel table-panel">
+                        <div class="panel-head table-head"><div><div class="kicker">Today</div><h2>Mark today's attendance</h2></div></div>
+                        <div class="table-header"><span>Employee</span><span>Department</span><span>Status</span><span>Late by (min)</span></div>
+                        <div id="recordAttendanceRows"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="page-ApproveLeave" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Leave</div>
+                            <h1>Leave Requests <span>✦</span></h1>
+                            <p>Review and approve or reject pending leave requests.</p>
+                        </div>
+                    </section>
+                    <div class="panel table-panel">
+                        <div class="panel-head table-head"><div><div class="kicker">Inbox</div><h2>Requests <span class="count" id="leaveReqCount">0</span></h2></div></div>
+                        <div id="leaveRequestsList" class="recent-activity-list" style="padding:10px 20px 20px;"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="page-ExportReport" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Reports</div>
+                            <h1>Export Today's Report <span>✦</span></h1>
+                            <p>A snapshot of today's attendance, ready to download.</p>
+                        </div>
+                        <div class="hero-actions">
+                            <button class="primary" onclick="notify('Attendance report exported','Your CSV download is ready.'); logActivity('#4dd8f0', &quot;Today's attendance report exported&quot;)">⇩ &nbsp; Export CSV</button>
+                        </div>
+                    </section>
+                    <div class="panel table-panel">
+                        <div class="panel-head table-head"><div><div class="kicker">Preview</div><h2>Today's status by employee</h2></div></div>
+                        <div class="table-header"><span>Employee</span><span>Department</span><span>Status</span></div>
+                        <div id="exportReportRows"></div>
+                    </div>
+                </div>
+
+                <div class="page" id="page-SendAnnouncement" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Comms</div>
+                            <h2>Send Announcement <span>✦</span></h2>
+                            <p>Broadcast a message to the whole company.</p>
+                        </div>
+                    </section>
+                    <section class="add-section-card" style="display:block;">
+                        <div class="form">
+                            <label>
+                                Audience
+                                <input type="text" id="annAudience" list="annAudienceList" placeholder="Everyone, Managers only, a department (e.g. Accounting only), or an employee name..." />
+                                <datalist id="annAudienceList"></datalist>
+                            </label>
+                            <label>
+                                Subject
+                                <input type="text" id="annSubject" placeholder="e.g. Office closed on Thursday" />
+                            </label>
+                            <label>
+                                Message
+                                <textarea id="annMessage" rows="5" placeholder="Write your announcement..." style="resize:vertical;"></textarea>
+                            </label>
+                            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+                                <button class="primary" onclick="sendAnnouncement()">Send Announcement</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="page" id="page-CreateReport" style="display:none;">
+                    <section class="hero">
+                        <div>
+                            <div class="eyebrow"><span class="pulse"></span>Reports</div>
+                            <h1>HR Summary Report <span>✦</span></h1>
+                            <p>An overview of headcount, attendance and department health.</p>
+                        </div>
+                    </section>
+                    <div id="hrReportPageBox" class="hr-report-box" style="display:grid;"></div>
+                    <section class="grid one" style="margin-top:15px;">
+                        <div class="panel dept-panel">
+                            <div class="panel-head table-head"><div><div class="kicker">Breakdown</div><h2>By department</h2></div></div>
+                            <div class="dept-grid" id="hrReportDeptGrid"></div>
+                        </div>
+                    </section>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
